@@ -57,22 +57,22 @@
 mod alloc;
 
 #[cfg(feature = "bincode")]
-mod file;
+pub mod file;
 
-mod action_tree;
-mod atomic_float;
-mod bet_size;
-mod bunching;
-mod card;
-mod game;
-mod hand;
-mod hand_table;
-mod interface;
-mod mutex_like;
-mod range;
-mod sliceop;
-mod solver;
-mod utility;
+pub mod action_tree;
+pub mod atomic_float;
+pub mod bet_size;
+pub mod bunching;
+pub mod card;
+pub mod game;
+pub mod hand;
+pub mod hand_table;
+pub mod interface;
+pub mod mutex_like;
+pub mod range;
+pub mod sliceop;
+pub mod solver;
+pub mod utility;
 
 #[cfg(feature = "bincode")]
 pub use file::*;

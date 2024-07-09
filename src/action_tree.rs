@@ -1,6 +1,7 @@
 use crate::bet_size::*;
 use crate::card::*;
 use crate::mutex_like::*;
+use std::panic::{RefUnwindSafe, UnwindSafe};
 
 #[cfg(feature = "bincode")]
 use bincode::{Decode, Encode};
@@ -148,12 +149,12 @@ pub struct ActionTree {
 
 #[derive(Default)]
 #[cfg_attr(feature = "bincode", derive(Decode, Encode))]
-pub(crate) struct ActionTreeNode {
-    pub(crate) player: u8,
-    pub(crate) board_state: BoardState,
-    pub(crate) amount: i32,
-    pub(crate) actions: Vec<Action>,
-    pub(crate) children: Vec<MutexLike<ActionTreeNode>>,
+pub struct ActionTreeNode {
+    pub player: u8,
+    pub board_state: BoardState,
+    pub amount: i32,
+    pub actions: Vec<Action>,
+    pub children: Vec<MutexLike<ActionTreeNode>>,
 }
 
 struct BuildTreeInfo {
@@ -973,6 +974,34 @@ impl ActionTree {
         let next_info = info.create_next(node.player, action);
         self.total_bet_amount_recursive(&node.children[index].lock(), &line[1..], next_info)
     }
+
+    /// Traverses the entire action tree and applies the visitor function to each node.
+    pub fn traverse<F>(&self, mut visitor: F)
+    where
+        F: FnMut(&ActionTreeNode),
+    {
+        self.traverse_recursive(&self.root.lock(), &mut visitor);
+    }
+
+    /// Recursive function to traverse the action tree.
+    fn traverse_recursive<F>(&self, node: &ActionTreeNode, visitor: &mut F)
+    where
+        F: FnMut(&ActionTreeNode),
+    {
+        visitor(node);
+
+        if node.is_terminal() {
+            return;
+        }
+
+        if node.is_chance() {
+            self.traverse_recursive(&node.children[0].lock(), visitor);
+        } else {
+            for child in &node.children {
+                self.traverse_recursive(&child.lock(), visitor);
+            }
+        }
+    }
 }
 
 impl ActionTreeNode {
@@ -984,6 +1013,18 @@ impl ActionTreeNode {
     #[inline]
     fn is_chance(&self) -> bool {
         self.player & PLAYER_CHANCE_FLAG != 0
+    }
+}
+
+impl std::fmt::Debug for ActionTreeNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ActionTreeNode")
+            .field("player", &self.player)
+            .field("board_state", &self.board_state)
+            .field("amount", &self.amount)
+            .field("actions", &self.actions)
+            .field("children", &self.children)
+            .finish()
     }
 }
 
@@ -1093,3 +1134,6 @@ fn merge_bet_actions(actions: Vec<Action>, pot: i32, offset: i32, param: f64) ->
     ret.reverse();
     ret
 }
+
+impl UnwindSafe for ActionTree {}
+impl RefUnwindSafe for ActionTree {}

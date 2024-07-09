@@ -2,6 +2,7 @@ use super::*;
 use crate::interface::*;
 use crate::sliceop::*;
 use crate::utility::*;
+use std::panic::{RefUnwindSafe, UnwindSafe};
 
 /// Decodes the encoded `i16` slice to the `f32` slice.
 #[inline]
@@ -1241,3 +1242,6 @@ impl PostFlopGame {
         }
     }
 }
+
+impl UnwindSafe for PostFlopGame {}
+impl RefUnwindSafe for PostFlopGame {}

@@ -2,6 +2,7 @@ use super::*;
 use crate::interface::*;
 use std::ptr;
 use std::slice;
+use std::panic::{RefUnwindSafe, UnwindSafe};
 
 impl GameNode for PostFlopNode {
     #[inline]
@@ -241,3 +242,6 @@ impl PostFlopNode {
         }
     }
 }
+
+impl UnwindSafe for PostFlopNode {}
+impl RefUnwindSafe for PostFlopNode {}

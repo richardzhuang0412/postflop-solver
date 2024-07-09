@@ -85,7 +85,7 @@ type IsomorphismData = (
 ///
 /// Examples: 2d2c => `0`, 2h2c => `1`, 2s2c => `2`, ..., AsAh => `1325`
 #[inline]
-pub(crate) fn card_pair_to_index(mut card1: Card, mut card2: Card) -> usize {
+pub fn card_pair_to_index(mut card1: Card, mut card2: Card) -> usize {
     if card1 > card2 {
         mem::swap(&mut card1, &mut card2);
     }

@@ -1,4 +1,6 @@
 use postflop_solver::*;
+use postflop_solver::card::{card_pair_to_index};
+use std::collections::HashMap;
 
 fn main() {
     // ranges of OOP and IP in string format
@@ -8,7 +10,7 @@ fn main() {
 
     let card_config = CardConfig {
         range: [oop_range.parse().unwrap(), ip_range.parse().unwrap()],
-        flop: flop_from_str("Td9d6h").unwrap(),
+        flop: flop_from_str("3d7d6h").unwrap(),
         turn: card_from_str("Qc").unwrap(),
         river: NOT_DEALT,
     };
@@ -87,15 +89,15 @@ fn main() {
     game.cache_normalized_weights();
     let equity = game.equity(0); // `0` means OOP player
     let ev = game.expected_values(0);
-    println!("Equity of oop_hands[0]: {:.2}%", 100.0 * equity[0]);
-    println!("EV of oop_hands[0]: {:.2}", ev[0]);
+    // println!("Equity of oop_hands[0]: {:.2}%", 100.0 * equity[0]);
+    // println!("EV of oop_hands[0]: {:.2}", ev[0]);
 
     // get equity and EV of whole hand
     let weights = game.normalized_weights(0);
     let average_equity = compute_average(&equity, weights);
     let average_ev = compute_average(&ev, weights);
-    println!("Average equity: {:.2}%", 100.0 * average_equity);
-    println!("Average EV: {:.2}", average_ev);
+    // println!("Average equity: {:.2}%", 100.0 * average_equity);
+    // println!("Average EV: {:.2}", average_ev);
 
     // get available actions (OOP)
     let actions = game.available_actions();
@@ -105,7 +107,11 @@ fn main() {
     );
 
     // play `Bet(120)`
+    println!("{:?}", holes_to_strings(game.private_cards(0)));
+    println!("{:?}", game.available_actions());
+    println!("{:?}", game.strategy());
     game.play(1);
+
 
     // get available actions (IP)
     let actions = game.available_actions();
@@ -141,7 +147,127 @@ fn main() {
 
     // deal "7s"
     game.play(card_7s as usize);
+    // println!("{:?}", game.available_actions());
+    // println!("{:?}", game.strategy().len());
+
+    // game.play(1);
 
     // back to the root node
-    game.back_to_root();
+    // game.back_to_root();
+
+    let strategy = game.strategy();
+    // println!("Strategy:");
+    // for (i, value) in strategy.iter().enumerate() {
+    //     println!("Action {}: {:.4}", i, value);
+    // }
+
+    let total: f32 = strategy.iter().sum();
+    // println!("Sum of all values in strategy: {:.4}", total);
+    // println!("{}", action_tree);
+
+    // Define the chunk size
+    let chunk_size = 167;
+
+    // Initialize a vector to store the sums
+    let mut sums = vec![0.0; chunk_size];
+
+    // Compute the sums
+    for i in 0..chunk_size {
+        sums[i] = strategy[i] + strategy[i + chunk_size] + strategy[i + 2 * chunk_size];
+    }
+
+    // Print the sums
+    // for (i, sum) in sums.iter().enumerate() {
+    //     println!("Sum for index {}: {:.4}", i, sum);
+    // }
+
+    let test_range = "22";
+    let parsed_test_range = test_range.parse::<Range>().unwrap();
+
+    // println!("Parsed Test Range: {:?}", parsed_test_range.raw_data());
+    // println!("Parsed Test Range Length: {:?}", parsed_test_range.raw_data().len());
+
+    // Find the index where the value is 1.0
+    let indices: Vec<_> = parsed_test_range.raw_data().iter()
+    .enumerate()
+    .filter_map(|(index, &v)| if v == 1.0 { Some(index) } else { None })
+    .collect();
+
+    // println!("Index with value 1.0: {:?}", indices);
+
+    // println!("{}", test_range.parse::<Range>().unwrap().to_string());
+
+    fn get_hand_index(hand: &str) -> Result<usize, String> {
+        // Split the hand string into two card strings
+        if hand.len() != 4 {
+            return Err("Invalid hand format".to_string());
+        }
+    
+        let card1_str = &hand[..2];
+        let card2_str = &hand[2..];
+    
+        // Convert the card strings to card indices
+        let card1 = card_from_str(card1_str)?;
+        let card2 = card_from_str(card2_str)?;
+    
+        // Convert the card indices to a pair index
+        let index = card_pair_to_index(card1, card2);
+    
+        Ok(index)
+    }
+    
+    fn generate_all_hands() -> Vec<String> {
+        let ranks = ["2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"];
+        let suits = ["c", "d", "h", "s"];
+        let mut hands = Vec::new();
+    
+        // Generate pairs
+        for &rank in &ranks {
+            for i in 0..4 {
+                for j in i + 1..4 {
+                    hands.push(format!("{}{}{}{}", rank, suits[i], rank, suits[j]));
+                }
+            }
+        }
+    
+        // Generate suited and offsuit hands
+        for i in 0..ranks.len() {
+            for j in (i + 1)..ranks.len() {
+                for k in 0..4 {
+                    // Suited
+                    hands.push(format!("{}{}{}{}", ranks[i], suits[k], ranks[j], suits[k]));
+    
+                    // Offsuit
+                    for l in 0..4 {
+                        if k != l {
+                            hands.push(format!("{}{}{}{}", ranks[i], suits[k], ranks[j], suits[l]));
+                        }
+                    }
+                }
+            }
+        }
+    
+        hands
+    }
+    
+    let hands = generate_all_hands();
+    let mut hand_indices = HashMap::new();
+
+    for hand in &hands {
+        match get_hand_index(hand) {
+            Ok(index) => {
+                hand_indices.insert(hand.clone(), index);
+            }
+            Err(e) => println!("Error for hand {}: {}", hand, e),
+        }
+    }
+
+    // Sort the hands based on their indices
+    let mut sorted_hands: Vec<_> = hand_indices.iter().collect();
+    sorted_hands.sort_by_key(|&(_, index)| index);
+
+    // for (hand, index) in sorted_hands {
+    //     println!("Hand: {}, Index: {}", hand, index);
+    // }
+
 }
