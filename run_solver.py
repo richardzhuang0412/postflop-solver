@@ -96,9 +96,9 @@ def run_solver(flop, turn, river, oop_range, ip_range, preflop_line,
         stderr_output = process.stderr.read()
         
         # Print and write stderr to the file
-        if stderr_output:
-            # print(stderr_output, end='')
-            system_output_file.write(stderr_output)
+        # if stderr_output:
+        #     # print(stderr_output, end='')
+        #     system_output_file.write(stderr_output)
     else:
         result = subprocess.run(command)
     
@@ -113,53 +113,54 @@ def run_solver(flop, turn, river, oop_range, ip_range, preflop_line,
     #     print(result.stderr)
 
 if __name__ == "__main__":
-    output_file_path = "system_output.txt"
+    output_file_path = "trial_1.txt"
     with open(output_file_path, "w") as system_output_file:
         pass
 
-    with open(output_file_path, "a") as system_output_file:
-        #TODO: Change path if necessary
-        preflop_ranges_path = "data/preflop_ranges.json"
-        with open(preflop_ranges_path, 'r') as file:
-            preflop_ranges = json.load(file)
-        scenario_list = pd.read_csv("data/scenario_list.csv")
-        board_samples = pd.read_csv("data/board_samples_new.csv")
-        flop_size_map_path = "data/flop_size_map.json"
-        with open(flop_size_map_path, 'r') as file:
-            flop_size_map = json.load(file)
-        # print(flop_size_map)
+    #TODO: Change path if necessary
+    preflop_ranges_path = "data/preflop_ranges.json"
+    with open(preflop_ranges_path, 'r') as file:
+        preflop_ranges = json.load(file)
+    scenario_list = pd.read_csv("data/scenario_list.csv")
+    board_samples = pd.read_csv("data/board_samples_new.csv")
+    flop_size_map_path = "data/flop_size_map.json"
+    with open(flop_size_map_path, 'r') as file:
+        flop_size_map = json.load(file)
+    # print(flop_size_map)
 
-        #TODO: Change index
-        scenario_start_index = 0
-        scenario_end_index = 1
-        # scenario_end_index = scenario_list.shape[0]
-        for i in range(scenario_start_index, scenario_end_index):
-            scenario_ip = scenario_list.iloc[i]['IP']
-            scenario_oop = scenario_list.iloc[i]['OOP']
-            scenario = scenario_list.iloc[i]['Scenario']
-            oop_range = get_range(preflop_ranges=preflop_ranges, scenario=scenario_oop, threshold=0.5)
-            ip_range = get_range(preflop_ranges=preflop_ranges, scenario=scenario_ip, threshold=0.5)
-            for j in range(board_samples.shape[0]):
-                print("------------------------------------------------------------------------------------")
-                texture = board_samples.iloc[j]["Texture"]
-                flop = board_samples.iloc[j]["Flop"].replace(",", "")
-                turn = board_samples.iloc[j]["Turn"]
-                river = board_samples.iloc[j]["River"]
-                flop_bet_size = flop_size_map[texture]
-                print(f"Preflop Line: {scenario}, Board: {flop},{turn},{river}")
-                system_output_file.write(f"Preflop Line: {scenario}, Board: {flop},{turn},{river}")
-                print(f"Flop Bet Size: {flop_bet_size}")
-                system_output_file.write(f"Flop Bet Size: {flop_bet_size}")
-                starting_pot, effective_stack = calculate_pot_size(scenario, 100)
-                print(f"Starting Pot: {starting_pot}, Effective Stack: {effective_stack}")
-                system_output_file.write(f"Starting Pot: {starting_pot}, Effective Stack: {effective_stack}")
-                folder_path = f"results/{scenario.replace('/', '_')}_{flop}_{turn}_{river}"
+    #TODO: Change index
+    scenario_start_index = 0
+    scenario_end_index = 1
+    # scenario_end_index = scenario_list.shape[0]
+    for i in range(scenario_start_index, scenario_end_index):
+        scenario_ip = scenario_list.iloc[i]['IP']
+        scenario_oop = scenario_list.iloc[i]['OOP']
+        scenario = scenario_list.iloc[i]['Scenario']
+        oop_range = get_range(preflop_ranges=preflop_ranges, scenario=scenario_oop, threshold=0.5)
+        ip_range = get_range(preflop_ranges=preflop_ranges, scenario=scenario_ip, threshold=0.5)
+        for j in range(board_samples.shape[0]):
+            print("------------------------------------------------------------------------------------")
+            texture = board_samples.iloc[j]["Texture"]
+            flop = board_samples.iloc[j]["Flop"].replace(",", "")
+            turn = board_samples.iloc[j]["Turn"]
+            river = board_samples.iloc[j]["River"]
+            flop_bet_size = flop_size_map[texture]
+            starting_pot, effective_stack = calculate_pot_size(scenario, 100)
+            folder_path = f"results/{scenario.replace('/', '_')}/{flop}_{turn}_{river}"
+            with open(output_file_path, "a") as system_output_file:
+                print(f"Preflop Line: {scenario}, Board: {flop},{turn},{river}, Texture: {texture}")
+                system_output_file.write(f"Preflop Line: {scenario}, Board: {flop},{turn},{river}, Texture: {texture}\n")
+                print(f"Flop Bet Size: {flop_bet_size}, Starting Pot: {starting_pot}, Effective Stack: {effective_stack}")
+                system_output_file.write(f"Flop Bet Size: {flop_bet_size}, Starting Pot: {starting_pot}, Effective Stack: {effective_stack}\n")
+                if not os.path.exists(f"results/{scenario.replace('/', '_')}"):
+                    os.makedirs(f"results/{scenario.replace('/', '_')}")
                 run_solver(flop, turn, river, oop_range, ip_range, scenario, flop_bet_size, starting_pot,
                 effective_stack, folder_path, system_output_file=system_output_file)
                 print(f"Results Solved and Saved to {folder_path}")
-                system_output_file.write(f"Results Solved and Saved to {folder_path}")
-                # break
+                system_output_file.write(f"Results Solved and Saved to {folder_path}\n")
+                system_output_file.write("------------------------------------------------------------------------------------\n")
             # break
+        # break
 
         # flop = "AdKs7h"
         # turn = "2c"

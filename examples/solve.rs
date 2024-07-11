@@ -14,6 +14,8 @@ use clap::Parser;
 struct HandFrequency {
     hand: String,
     frequencies: Vec<String>,
+    equity: f32,
+    ev: f32,
 }
 
 impl fmt::Debug for HandFrequency {
@@ -105,6 +107,8 @@ fn process_game(game: &PostFlopGame) -> Result<(Vec<Action>, Vec<HandFrequency>)
     let cards_result = holes_to_strings(game.private_cards(player.into()));
     let actions = game.available_actions();
     let strategy = game.strategy();
+    let card_equity = game.equity(player.into());
+    let card_ev = game.expected_values(player.into());
 
     // Handle the Result type from holes_to_strings
     let cards = match cards_result {
@@ -124,6 +128,8 @@ fn process_game(game: &PostFlopGame) -> Result<(Vec<Action>, Vec<HandFrequency>)
         result.push(HandFrequency {
             hand: cards[i].clone(),
             frequencies: hand_frequencies,
+            equity: card_equity[i].clone(),
+            ev: card_ev[i].clone()
         });
     }
 
@@ -164,6 +170,7 @@ pub fn apply_history_safe(game: &mut PostFlopGame, history: &[usize]) -> Result<
         for &action in history {
             game.play(action);
         }
+        game.cache_normalized_weights();
         Ok(())
     })) {
         Ok(result) => result,
@@ -324,7 +331,7 @@ fn main() {
     let mut game = PostFlopGame::with_config(card_config, action_tree).unwrap();
 
     // check memory usage
-    let (mem_usage, mem_usage_compressed) = game.memory_usage();
+    let (_mem_usage, mem_usage_compressed) = game.memory_usage();
     // println!(
     //     "Memory usage without compression (32-bit float): {:.2}GB",
     //     mem_usage as f64 / (1024.0 * 1024.0 * 1024.0)
@@ -363,7 +370,7 @@ fn main() {
             }
             Err(_) => {
                 // eprintln!("Error: {}", err);
-                continue;
+                // continue;
             }
         }
         
